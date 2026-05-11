@@ -1,0 +1,79 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://sre:sre@pg_db:5432/sre?sslmode=disable
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      pg_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  pg_db:
+    image: postgres:16
+    container_name: sre_lab_postgres
+    environment:
+      - POSTGRES_DB=sre
+      - POSTGRES_USER=sre
+      - POSTGRES_PASSWORD=sre
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_db:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sre -d sre"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    profiles:
+      - tools
+    volumes:
+      - ./db/migrations:/migrations:ro
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://sre:sre@pg_db:5432/sre?sslmode=disable",
+        "up"
+      ]
+    depends_on:
+      pg_db:
+        condition: service_healthy
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+volumes:
+  pg_db:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
