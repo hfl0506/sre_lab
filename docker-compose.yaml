@@ -70,6 +70,18 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+caddy:
+  image: caddy:2
+  ports:
+    - "80:80"
+    - "443:443"
+  volumes:
+    - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    - caddy_data:/data
+    - caddy_config:/config
+  depends_on:
+    - api
+  restart: unless-stopped
 volumes:
   pg_db:
     driver: local
