@@ -1,8 +1,6 @@
 services:
   api:
     build: .
-    ports:
-      - "8080:8080"
     environment:
       - DATABASE_URL=postgres://sre:sre@pg_db:5432/sre?sslmode=disable
       - REDIS_ADDR=redis:6379
@@ -18,8 +16,6 @@ services:
       - POSTGRES_DB=sre
       - POSTGRES_USER=sre
       - POSTGRES_PASSWORD=sre
-    ports:
-      - "5432:5432"
     volumes:
       - pg_db:/var/lib/postgresql/data
     restart: unless-stopped
@@ -31,7 +27,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.55.1
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -57,12 +53,10 @@ services:
         condition: service_healthy
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
   grafana:
     image: grafana/grafana:11.3.0
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -88,4 +82,8 @@ volumes:
   grafana_data:
     driver: local
   prometheus_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
